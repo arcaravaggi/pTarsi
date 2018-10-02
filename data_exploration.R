@@ -4,7 +4,7 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-pdat <- read.csv("../data_raw/all_data.csv")
+pdat <- read.csv("all_data.csv")
 
 #### Counts, tarsus data (mean & SD) and regression coefficients for each species
 dat.1 <- pdat %>% 
@@ -17,11 +17,11 @@ dat.1 <- pdat %>%
 pdat %>% filter(code == "GRETI") %>% slice(which.max(max_t)) # Removing GRETI outlier identified a-priori
 pdat <- pdat[!(pdat$code == "GRETI" & pdat$ring_no == "Y638208"),]
 
-pdat %>% filter(code %in% c("BLUTI", "GRETI", "CHAFF", "ROBIN")) %>% # Plot focal species
+pdat %>% filter(code %in% c("BLABI", "BLUTI", "CHAFF", "GRETI", "PIEFL", "ROBIN")) %>% # Plot focal species
   ggplot(., aes(min_t, max_t, colour=factor(code))) + 
   stat_smooth(method=lm, fullrange=FALSE) + 
   geom_point() +
-  facet_wrap( ~ code,  ncol=2)
+  facet_wrap( ~ code,  ncol=2, scales = "free") 
 
 #### As above, but also split by sex
 dat.2 <- pdat %>% 
