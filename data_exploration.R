@@ -4,21 +4,20 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-pdat <- read.csv("all_data.csv")
+pdat <- read.csv("exploration_app/data/all_data.csv")
 
 #### Counts, tarsus data (mean & SD) and regression coefficients for each species
+pdat %>% filter(code == "GRETI") %>% slice(which.max(max_t)) # Removing GRETI outliers identified a-priori
+pdat %>% filter(code == "GRETI") %>% slice(which.min(max_t))
+pdat <- pdat[!(pdat$code == "GRETI" & pdat$ring_no == "Y638208"),]
+pdat <- pdat[!(pdat$code == "GRETI" & pdat$ring_no == "AFB9885"),]
+
 dat.1 <- pdat %>% 
   group_by(code) %>%
   summarise(count = length(code),
             mean_min = mean(min_t), sd_min = sd(min_t),
             mean_max = mean(max_t), sd_max = sd(max_t),
             r = cor(min_t, max_t))
-
-pdat %>% filter(code == "GRETI") %>% slice(which.max(max_t)) # Removing GRETI outliers identified a-priori
-pdat %>% filter(code == "GRETI") %>% slice(which.min(max_t))
-pdat <- pdat[!(pdat$code == "GRETI" & pdat$ring_no == "Y638208"),]
-pdat <- pdat[!(pdat$code == "GRETI" & pdat$ring_no == "AFB9885"),]
-
 pdat %>% 
   filter(code %in% c("BLABI", "BLUTI", "CHAFF", "GRETI", "PIEFL", "ROBIN")) %>% # Plot focal species
   group_by(code) %>% # manipulating the code to get counts per species for facet headers

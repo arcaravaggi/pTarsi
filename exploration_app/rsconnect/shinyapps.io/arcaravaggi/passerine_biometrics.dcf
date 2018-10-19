@@ -1,0 +1,13 @@
+name: passerine_biometrics
+title: passerine_biometrics
+username:
+account: arcaravaggi
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 521010
+bundleId: 1651127
+url: https://arcaravaggi.shinyapps.io/passerine_biometrics/
+when: 1539946084.12907
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: app.R
