@@ -5,8 +5,8 @@ account: arcaravaggi
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 521010
-bundleId: 1683242
+bundleId: 1745980
 url: https://arcaravaggi.shinyapps.io/passerine_biometrics/
-when: 1541436482.7899
+when: 1544111656.5776
 asMultiple: FALSE
 asStatic: FALSE

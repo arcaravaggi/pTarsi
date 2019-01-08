@@ -1,0 +1,12 @@
+name: exploration_app
+title: exploration_app
+username:
+account: arcaravaggi
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 631266
+bundleId: 1802733
+url: https://arcaravaggi.shinyapps.io/exploration_app/
+when: 1546949147.56367
+asMultiple: FALSE
+asStatic: FALSE
