@@ -2,21 +2,15 @@ library(shiny)
 library(markdown)
 library(dplyr)
 library(lubridate)
-library(changepoint)
 library(ggplot2)
 
 pdat <- read.csv("data/all_data.csv")
 pdat <- pdat[order(pdat$species),]
 pdat$visit_date <- as.Date(pdat$visit_date, format="%d/%m/%Y")
 sp.nam <- unique(pdat$species)
-pdat %>% filter(code == "GRETI") %>% slice(which.max(max_t)) # Removing GRETI outliers identified a-priori
-pdat %>% filter(code == "GRETI") %>% slice(which.min(max_t))
-pdat <- pdat[!(pdat$code == "GRETI" & pdat$ring_no == "Y638208"),]
-pdat <- pdat[!(pdat$code == "GRETI" & pdat$ring_no == "AFB9885"),]
 
 pdat2 <- pdat %>%  group_by(species) %>%  filter(n() > 16) # Only include species with >16 records (power analysis - 0.95 power, 0.01 significance, r = 0.8)
 pdat2$visit_date <- as.Date(pdat2$visit_date, format="%d/%m/%Y")
-
 
 # Dataframe for summary data
 pdat3 <- pdat %>%  group_by(species) %>% summarize(
@@ -63,22 +57,20 @@ ui <- navbarPage("Passerine biometrics",
                               selectInput('sp', 'Species', unique(pdat2$species),
                                           selected = unique(pdat2$species)[[1]]),
                               actionButton("update", "Update"),
-                              selectInput('error', 'Error', c("Standard Deviation", "95% Confidence Interval"),
-                                          selected = c("Standard Deviation")),
                               sliderInput(inputId = 'max_grp',
                                           label = "Maximum group size:",
-                                          min = 5, max = 100,value = 16),
+                                          min = 5, max = 250,value = 16),
                               sliderInput(inputId = 'reps',
                                           label = "Number of iterations:",
-                                          min = 1, max = 20, value = 3),
+                                          min = 1, max = 100, value = 10),
                               hr(),
-                              helpText("Mean & SD R^2 for a given species, based on minimum and maximum tarsus measurements. Data are randomly resampled-with-replacement, across X individuals ('group size') and Y iterations. Data are cleaned prior to processing - outliers are identified according to Tukey's 1.5*IQR threshold applied to the interaction between minimum and maximum tarsus measurements. Red vertical lines = breaks indicated by change-point analysis using At Most One Change (AMOC).")
-                            ),
-                            mainPanel(
+                              helpText("Mean & SD R^2 for a given species, based on minimum and maximum tarsus measurements. Data are randomly resampled-with-replacement, across X individuals ('group size') and Y iterations. Data are cleaned prior to processing - outliers are identified according to Tukey's 1.5*IQR threshold applied to the interaction between minimum and maximum tarsus measurements.")
+                              ),
+                          mainPanel(
                               plotOutput('plot2')
+                              )
                             )
-                          )
-                 ),
+                          ),
                  tabPanel("Summary data",
                           sidebarLayout(
                             sidebarPanel(
@@ -107,55 +99,53 @@ server <- function(input, output, session) {
     names(a) <- c("x", "y")
     a <- a[complete.cases(a), ]
   })
+  
+  selectedData2 <- reactive({
+    a <- subset(pdat2, pdat2$species %in% input$sp)
+    a <- droplevels(a)
+    a$temp <- a$min_t*a$max_t
+    })
 
-  selectedData3 <- reactive({
-    pTResample <- function(df, mi = 1, ma = input$max_grp){
-      input$update
-      outlierKD <- function(dt, var) {
-        var_name <- eval(substitute(var),eval(dt))
-        na1 <- sum(is.na(var_name))
-        m1 <- mean(var_name, na.rm = T)
-        outlier <- boxplot.stats(var_name)$out
-        mo <- mean(outlier)
-        var_name <- ifelse(var_name %in% outlier, NA, var_name)
-        na2 <- sum(is.na(var_name))
-        m2 <- mean(var_name, na.rm = T)
-        dt[as.character(substitute(var))] <- invisible(var_name)
-        assign(as.character(as.list(match.call())$dt), dt, envir = .GlobalEnv)
-        dt <- dt[complete.cases(dt),] # data frame minus outliers
-        return(invisible(dt))
-      }
-      
-      a <- subset(df, df$species %in% input$sp)
-      a <- droplevels(a)
-      a$temp <- a$min_t*a$max_t
-      b <-  outlierKD(a, temp)
-      b$temp <- NULL
-      grpResample <- function(f, v1, v2){
-        d <- data.frame(groupsize = c(mi:ma), s = NA)
-        for(i in nrow(d)){
-          for(i in mi:ma){
-            a <- f[sample(x = 1:nrow(f), size = i, replace = T), ]
-            d$s[i] <- cor(a$min_t,a$max_t)^2
-          }
-          return(d)
-        }
-      }
-      r <- replicate(input$reps, grpResample(b))
-      d <- data.frame(t((matrix(unlist(r), nrow=length(r), byrow=T))))
-      d <- d[,seq(2,ncol(d),2)]
-      w <- d %>% mutate(avg = apply(.,1,mean),
-                        sd = apply(.,1,sd),
-                        n.b = n()) %>%
-        mutate(se.b = sd/sqrt(n.b),
-               lci = avg - qt(1 - (0.05/2), n.b - 1) * se.b,
-               uci = avg + qt(1 - (0.05/2), n.b - 1) * se.b,
-               ci.diff = uci - lci)
-      w$groupsize <- c(mi:ma)
-      w[is.na(w)] <- 0
-      return(w)
+  pTResample <- function(df, mi = 1, ma = input$max_grp){
+    input$update
+    outlierKD <- function(dt, var) {
+      var_name <- eval(substitute(var),eval(dt))
+      na1 <- sum(is.na(var_name))
+      m1 <- mean(var_name, na.rm = T)
+      outlier <- boxplot.stats(var_name)$out
+      mo <- mean(outlier)
+      var_name <- ifelse(var_name %in% outlier, NA, var_name)
+      na2 <- sum(is.na(var_name))
+      m2 <- mean(var_name, na.rm = T)
+      dt[as.character(substitute(var))] <- invisible(var_name)
+      assign(as.character(as.list(match.call())$dt), dt, envir = .GlobalEnv)
+      dt <- dt[complete.cases(dt),] # data frame minus outliers
+      return(invisible(dt))
     }
-    tmp <- pTResample(pdat2)
+    b <- outlierKD(a, temp)
+    b$temp <- NULL
+    grpResample <- function(f, v1, v2){
+      d <- data.frame(groupsize = c(mi:ma), s = NA)
+      for(i in nrow(d)){
+        for(i in mi:ma){
+          a <- f[sample(x = 1:nrow(f), size = i, replace = T), ]
+          d$s[i] <- cor(a$min_t,a$max_t)^2
+        }
+        return(d)
+      }
+    }
+    r <- replicate(input$reps, grpResample(b))
+    d <- data.frame(t((matrix(unlist(r), nrow=length(r), byrow=T))))
+    d <- d[,seq(2,ncol(d),2)]
+    w <- d %>% mutate(avg = apply(.,1,mean),
+                      sd = apply(.,1,sd))
+    w$groupsize <- c(mi:ma)
+    w[is.na(w)] <- 0
+    return(w)
+  }
+  
+  selectedData3 <- reactive({
+    tmp <- pTResample(selectedData2())
   })
   
   output$plot1 <- renderPlot({
@@ -168,23 +158,10 @@ server <- function(input, output, session) {
   
   output$plot2 <- renderPlot({
     par(mar = c(5.1, 4.1, 3, 3))
-    if(input$error == "Standard Deviation"){
     ggplot(selectedData3(), aes(x = groupsize, y = avg)) +
       geom_point(size = 2) +
       geom_errorbar(aes(ymin = avg-sd, ymax = avg+sd)) + 
-      geom_smooth() + 
-      xlab("Number of individuals measured") + 
-      ylab("R^2") + 
-      geom_vline(xintercept = cpts(cpt.var(diff(selectedData3()$sd, method="AMOC"))), colour = "red")
-    } else {
-      ggplot(selectedData3(), aes(x = groupsize, y = avg)) +
-        geom_point(size = 2) +
-        geom_errorbar(aes(ymin = lci, ymax = uci)) + 
-        geom_smooth() + 
-        xlab("Number of individuals measured") + 
-        ylab("R^2") +
-        geom_vline(xintercept = cpts(cpt.var(diff(selectedData3()$ci.diff, method="AMOC"))), colour = "red")
-    }
+      geom_smooth()
   })
   
   
