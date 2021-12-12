@@ -9,4 +9,4 @@ Caravaggi A, Bayley S, Facey RJ, de la Hera I, Shewring M, Smith JA. (In review)
 
 **[all_data.csv](https://github.com/arcaravaggi/pTarsi/blob/master/all_data.csv)** - Data 
 
-**[Shiny app](https://arcaravaggi.shinyapps.io/passerine_biometrics/)** for data exploration.   
+**[Shiny app](https://arcaravaggi.shinyapps.io/exploration_app/)** for data exploration.   
